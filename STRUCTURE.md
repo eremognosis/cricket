@@ -1,22 +1,16 @@
 # Project Directory Structure
 
-Generated on: 2026-02-22 13:16:19
+Generated on: 2026-02-22 15:13:15
 
 ```
 crick/
 ├── data/
-│   ├── rawdata/
-│   │   ├── leaguejsons/
-│   │   ├── matches/
-│   │   │   └── WODI/
-│   │   │       ├── 1454391.json
-│   │   │       └── 276226.json
-│   │   ├── playerjsons/
-│   │   ├── registry/
-│   │   │   └── people.csv
-│   │   ├── seasons/
-│   │   └── teamjsons/
 │   └── stageddata/
+│       ├── leagues.parquet
+│       ├── players.parquet
+│       ├── registry.db
+│       ├── seasons.parquet
+│       └── teams.parquet
 ├── dbtcrick/
 │   ├── models/
 │   │   ├── inter/
@@ -25,9 +19,16 @@ crick/
 │   ├── dbt_project.yml
 │   └── schema.yml
 ├── logs/
+│   ├── download.log
+│   ├── error_players.log
+│   ├── missing_players.log
+│   └── parsing.log
 ├── src/
+│   ├── downloadespn.py
+│   ├── extractleagues.py
 │   ├── extractmatches.py
 │   ├── extractplayers.py
+│   ├── extractteams.py
 │   ├── generate_structure.py
 │   └── metaregis.py
 ├── .gitignore

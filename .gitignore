@@ -1,1 +1,4 @@
 data/
+logs/
+src/generate_structure.py
+src/__pycache__/
