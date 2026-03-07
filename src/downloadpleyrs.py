@@ -82,7 +82,11 @@ def downloadplayer(row):
         return True
 
     # print(cid)
-    PDATAS.append((idd, id, cid, name))
+    PDATAS.append({
+        "id": idd,
+        "idnew": id,
+        
+    })
     ok = download_and_save_target(url, id)
 
     if ok:
@@ -104,24 +108,26 @@ def main():
             for future in as_completed(futures):
                 future.result()
                 pbar.update(1)
+    df = pd.DataFrame(PDATAS)
+    df.to_parquet("./data/stageddata/maps.parquet", index=False)
 
-conn = sqlite3.connect("./data/selfpeople.db")
-curr = conn.cursor()
-curr.execute('''
-             CREATE TABLE IF NOT EXISTS people (
-                 id TEXT,
-                 idnew TEXT,
-                 cricinfoid TEXT,
-                 name TEXT
-             )
+# conn = sqlite3.connect("./data/selfpeople.db")
+# curr = conn.cursor()
+# curr.execute('''
+#              CREATE TABLE IF NOT EXISTS people (
+#                  id TEXT,
+#                  idnew TEXT,
+#                  cricinfoid TEXT,
+#                  name TEXT
+#              )
              
-             ''')
-# df = pd.DataFrame(PDATAS)
-# df.to_sql("people", conn, if_exists="replace", index=False)
+#              ''')
+# # df = pd.DataFrame(PDATAS)
+# # df.to_sql("people", conn, if_exists="replace", index=False)
 
-curr.executemany('INSERT INTO people (id, idnew, cricinfoid, name) VALUES (?, ?, ?, ?)', PDATAS)
-conn.commit()
-conn.close()
+# curr.executemany('INSERT INTO people (id, idnew, cricinfoid, name) VALUES (?, ?, ?, ?)', PDATAS)
+# conn.commit()
+# conn.close()
 
 
 main()

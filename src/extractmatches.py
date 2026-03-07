@@ -24,6 +24,7 @@ STAGED_DELIVERIES = f"./data/stageddata/deliveries/{SELECT_DATA}"
 STAGED_MATCHES = f"./data/stageddata/matches/{SELECT_DATA}"
 STAGED_PEOPLE = f"./data/stageddata/peoplematchdata/{SELECT_DATA}"
 TEAM_DATA = "./data/stageddata/teams.parquet"
+PLAYERMAP = "./data/stageddata/playeridmap.parquet"
 
 os.makedirs("./logs", exist_ok=True)
 os.makedirs(STAGED_DELIVERIES, exist_ok=True)
@@ -31,6 +32,10 @@ os.makedirs(STAGED_MATCHES, exist_ok=True)
 os.makedirs(STAGED_PEOPLE, exist_ok=True)
 teamregistry = pd.read_parquet(TEAM_DATA).set_index('name')['team_id'].to_dict() # we will need this to map team names to ids in the match records, since the deliveries only have team names and we want to link them to ids for easier analysis later
 # for 23 minutes i was uccking up what the hell then realized that i was mapping name to id and not other way round, fuck dictionary
+pregistry = pd.read_parquet(PLAYERMAP).set_index("id")["idnew"].to_dict()
+
+
+
 
 def getteamid(name):
     return teamregistry.get(name, name) if name else None
@@ -57,7 +62,7 @@ def process_match_file(filepath):
             return None
 
         people = info.get('registry', {}).get('people', {})
-        def get_p(name): return people.get(name, name) if name else None
+        def get_p(name): return pregistry.get(people.get(name, name),name) if name else None
         peoplmatches =[]
         for k,v in people.items():
 
@@ -257,7 +262,7 @@ def main():
     if 'tourmatch' in df.columns:
             df['tourmatch'] = df['tourmatch'].astype(str)
     try:
-        with ProcessPoolExecutor(max_workers=40) as executor:
+        with ProcessPoolExecutor(max_workers=80) as executor:
             for result in executor.map(process_match_file, match_files):
                 if result:
                     m_rec, d_list, p_list = result

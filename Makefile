@@ -6,6 +6,7 @@ all: extract transform
 extract:
 	pip3 install -r requirements.txt
 	python src/getleaguefiles.py
+	python src/getteams.py
 	python src/downloadespn.py
 	python src/downloadpleyrs.py
 	python src/extractleagues.py

@@ -1,7 +1,7 @@
 #=========================================================
-# FILE DESCRIPTION : `getleaguefiles.py`
+# FILE DESCRIPTION : `getteams.py`
 # 
-# Downloads league metadata from ESPN API, fetches all league JSONs
+# Downloads team metadata from ESPN API, fetches all team JSONs
 # from paginated endpoints, and saves them locally with registry tracking.
 #
 # WRITTEN BY : RAJ 
@@ -17,14 +17,14 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging, traceback
 from tqdm import tqdm
 from metaregis import MetadataRegistry
-from bidmap import lidmap
+from bidmap import tidmap
 # ===================
 
 
 # ===== CONFIG =====
 REGISTRY = MetadataRegistry()
-BASE_URL  = "http://core.espnuk.org/v2/sports/cricket/leagues"
-OUTPUT_DIR = "./data/rawdata/leaguejsons"  #\
+BASE_URL  = "http://core.espnuk.org/v2/sports/cricket/teams"
+OUTPUT_DIR = "./data/rawdata/teamjsons"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs("./logs", exist_ok=True)
 # ==================
@@ -53,7 +53,7 @@ def geturls(URLS,i):
 def download_and_save_target(url):
     """Downloads the final JSON and saves it with proper directory handling."""
     id = url.rstrip('/').split('/')[-1].split('?')[0]
-    id = lidmap(int(id))
+    id = tidmap(int(id))
     filepath = os.path.join(OUTPUT_DIR, f"{id}.json")
     
     # Skip if already processed and unchanged
@@ -75,7 +75,7 @@ def download_and_save_target(url):
         # Mark as processed after successful download
         new_hash = REGISTRY.get_file_hash(filepath)
         if new_hash:
-            REGISTRY.mark_processed(filepath, 'league', new_hash)
+            REGISTRY.mark_processed(filepath, 'team', new_hash)
             
         return True
     except Exception as e:
@@ -87,28 +87,28 @@ def download_and_save_target(url):
         return False # typical politican promises
 
 def main():
-    URLS= []
+    URLS = []
     with ThreadPoolExecutor(max_workers=8) as executor:
         total_pages = gettotalpages()
         futures = [executor.submit(geturls, URLS, i) for i in range(1, total_pages + 1)]
-        for future in tqdm(as_completed(futures), total=total_pages, desc="Fetching league URLs"):
+        for future in tqdm(as_completed(futures), total=total_pages, desc="Fetching team URLs"):
             try:
                 future.result()
             except Exception as e:
-                logging.error(f"Error fetching league URLs: {e}")
+                logging.error(f"Error fetching team URLs: {e}")
                 with open("./logs/download.log", "a") as logf:
-                    logf.write(f"Error fetching league URLs: {e}\n{traceback.format_exc()}\n")
+                    logf.write(f"Error fetching team URLs: {e}\n{traceback.format_exc()}\n")
                     
     with ThreadPoolExecutor(max_workers=8) as exec:
         futures = {exec.submit(download_and_save_target, url) for url in URLS}
-        with tqdm(total = len(URLS), desc="Downloading leagues") as pbar:
+        with tqdm(total = len(URLS), desc="Downloading teams") as pbar:
             for future in as_completed(futures):
                 try:
                     future.result()
                 except Exception as e:
-                    logging.error(f"Error downloading league data: {e}")
+                    logging.error(f"Error downloading team data: {e}")
                     with open("./logs/download.log", "a") as logf:
-                        logf.write(f"Error downloading league data: {e}\n{traceback.format_exc()}\n")
+                        logf.write(f"Error downloading team data: {e}\n{traceback.format_exc()}\n")
                 finally:
                     pbar.update(1)
 
