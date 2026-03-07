@@ -3,6 +3,6 @@ logs/
 src/generate_structure.py
 src/__pycache__/
 .idea/
+.venv/
 .vscode/
-src/generate_structure.py
 pyscripts/

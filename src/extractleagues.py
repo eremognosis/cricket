@@ -6,10 +6,10 @@
 # staged data suitable for further things
 #
 # WRITTEN BY : RAJ 
-# Last UPDATED : 2026-02-22
+# Last UPDATED : 2026-03-07
 #=========================================================
 
-import json
+import json, requests
 import os
 import glob
 import pandas as pd
@@ -19,9 +19,15 @@ REGISTRY = MetadataRegistry()
 LEAGUES_DIR = "./data/rawdata/leaguejsons"
 SEASONS_DIR = "./data/rawdata/seasons"
 stageDANCE = "./data/stageddata"
-
+os.makedirs(stageDANCE, exist_ok=True)
+os.makedirs("./logs", exist_ok=True)
+os.makedirs(LEAGUES_DIR, exist_ok=True)
+os.makedirs(SEASONS_DIR, exist_ok=True)
 def extract_id(ref_url):
     return ref_url.rstrip('/').split('/')[-1].split('?')[0] if ref_url else None  # weird but we have to do 
+
+
+
 
 def main():
     os.makedirs(stageDANCE, exist_ok=True)

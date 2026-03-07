@@ -10,19 +10,12 @@ import glob, traceback
 import pandas as pd
 from concurrent.futures import ProcessPoolExecutor
 from metaregis import MetadataRegistry
-
+from bidmap import midmap, idmap
 REGISTRY = MetadataRegistry()
 SELECT_DATA = 'WT20I'
 # 
 # as of today, i will change a bit
-# i will change the code i mean, not  "i will change", i wont change, sher sher haiewehtghjer hj
 
-
-# # i used cricsheet earlier 
-##### but found a bit less adequecy and built my own equivalent with zonal, speed etc data
-
-# so i will update, but with samw
-# # 
 # 
 # 
 
@@ -32,7 +25,10 @@ STAGED_MATCHES = f"./data/stageddata/matches/{SELECT_DATA}"
 STAGED_PEOPLE = f"./data/stageddata/peoplematchdata/{SELECT_DATA}"
 TEAM_DATA = "./data/stageddata/teams.parquet"
 
-
+os.makedirs("./logs", exist_ok=True)
+os.makedirs(STAGED_DELIVERIES, exist_ok=True)
+os.makedirs(STAGED_MATCHES, exist_ok=True)
+os.makedirs(STAGED_PEOPLE, exist_ok=True)
 teamregistry = pd.read_parquet(TEAM_DATA).set_index('name')['team_id'].to_dict() # we will need this to map team names to ids in the match records, since the deliveries only have team names and we want to link them to ids for easier analysis later
 # for 23 minutes i was uccking up what the hell then realized that i was mapping name to id and not other way round, fuck dictionary
 
@@ -54,6 +50,7 @@ def process_match_file(filepath):
         info = data.get('info', {})
         innings = data.get('innings', [])
         match_id = os.path.basename(filepath).split('.')[0]
+        match_id = midmap(int(match_id))
         
         if not innings or info.get('match_type') not in ('T20', 'ODI'):
             REGISTRY.mark_processed(filepath, 'skipped', file_hash)
