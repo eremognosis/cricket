@@ -12,7 +12,7 @@
 
 # ===== IMPORTS =====
 import os, csv, pandas as pd, sqlite3
-import json
+import json,time,random
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging, traceback
@@ -52,8 +52,9 @@ def download_and_save_target(url,id):
         
         with open(filepath, 'w', encoding='utf-8') as f: # "w" because in same file duplicate should not happen for whatever reasosn
             json.dump(data, f, indent=4)
-            
+        time.sleep(random.uniform(0.1,0.4))
         return True
+    
     except Exception as e:
         # logging.error(f"Error downloading {url}: {e}")
         f = open("./logs/download.log", "a")
@@ -75,8 +76,7 @@ def downloadplayer(row):
     url = f"http://core.espnuk.org/v2/sports/cricket/athletes/{cid}"
     id = idmap(int(cid))
     target_file = os.path.join(OUTPUT_DIR, f"{id}.json")
-
-    # Skip when this exact output payload has already been tracked.
+ 
     current_hash = registry.get_file_hash(target_file)
     if current_hash and registry.is_processed(target_file, current_hash):
         return True
@@ -109,7 +109,7 @@ def main():
                 future.result()
                 pbar.update(1)
     df = pd.DataFrame(PDATAS)
-    df.to_parquet("./data/stageddata/maps.parquet", index=False)
+    df.to_parquet("./data/stageddata/playeridmap.parquet", index=False)
 
 # conn = sqlite3.connect("./data/selfpeople.db")
 # curr = conn.cursor()

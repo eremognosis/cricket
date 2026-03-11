@@ -107,7 +107,7 @@ def process_match_file(filepath):
             'tosswin': getteamid(toss.get('winner')),
             'decision': toss.get('decision'),
             'referee': get_p(info.get('officials', {}).get('match_referees', [None])[0]),
-            'umpire1': get_p(info.get('officials', {}).get('umpires', [None, None])[0]),
+            'umpire1': get_p(info.get('officials', {}).get('umpires', [None, None])[0]) if len(info.get('officials', {}).get('umpires', [])) else None,
             'umpire2': get_p(info.get('officials', {}).get('umpires', [None, None])[1]) if len(info.get('officials', {}).get('umpires', [])) > 1 else None,
             'tvumpire': get_p(info.get('officials', {}).get('tv_umpires', [None])[0]),
             'isTie': 1 if outcome.get('result') == 'tie' else 0,
@@ -152,6 +152,7 @@ def process_match_file(filepath):
                     runs = d.get('runs', {})
                     extras = d.get('extras', {})
                     wickets = d.get('wickets', [])
+                    review = d.get('review', {})
                     
                     b_id, bowl_id, ns_id = get_p(d.get('batter')), get_p(d.get('bowler')), get_p(d.get('non_striker'))
                     
@@ -198,7 +199,7 @@ def process_match_file(filepath):
                     deliveries_list.append({
                         'matchid': match_id,
                         'inning': inn_idx,  # 0 indexed
-                        'gender': match_record['gender'],
+                        # 'gender': match_record['gender'],
                         'battingteam': getteamid(batting_team), # for now we keep team name here, can map to id later...
                         'over_num': over_num,
                         'ball_num': ball_idx,
@@ -218,21 +219,28 @@ def process_match_file(filepath):
                         'wicket_type': wickets[0].get('kind') if wickets else None,
                         'player_out_id': get_p(wickets[0].get('player_out')) if wickets else None,
                         'fielderct': get_p(wickets[0].get('fielders', [{}])[0].get('name')) if wickets and wickets[0].get('fielders') else None,
-                        'currentruns': curr_runs,
-                        'currentwickets': curr_wicks,
-                        'targetruns': target_runs,
-                        'current_runrate': round((curr_runs / (total_legal_balls / 6)) if total_legal_balls > 0 else 0, 2),
-                        'required_runrate': round(((target_runs - curr_runs) / ((match_record['overs']*6 - total_legal_balls) / 6)) if target_runs and (match_record['overs']*6 - total_legal_balls) > 0 else 0, 2),
-                        'lastboundary': last_boundary_balls,
-                        'lastwicket': lwballs,
-                        'totalextras': total_extras,
-                        'currentstrikerruns': b_stat['runs'],
-                        'currentstrikerballs': b_stat['balls'],
-                        'currentnstrikerruns': get_stat(ns_id)['runs'],
-                        'currentnstrikerballs': get_stat(ns_id)['balls'],
-                        'currentbowlerwickets': bowl_stat['wicks'],
-                        'currentbowlerruns': bowl_stat['bowled_runs'],
-                        'currentbowlerballs': bowl_stat['bowled_balls']
+                        'isreview': 1 if review else 0,
+                        'review_by': getteamid(review.get('by')) if review else None,
+                        'review_umpire': get_p(review.get('umpire')) if review else None,
+                        'review_batter_id': get_p(review.get('batter')) if review else None,
+                        'review_bowler_id': get_p(review.get('bowler')) if review else None,
+                        'review_decision': review.get('decision') if review else None,
+                        'review_type': review.get('type') if review else None
+                        # 'currentruns': curr_runs,
+                        # 'currentwickets': curr_wicks,
+                        # 'targetruns': target_runs,
+                        # 'current_runrate': round((curr_runs / (total_legal_balls / 6)) if total_legal_balls > 0 else 0, 2),
+                        # 'required_runrate': round(((target_runs - curr_runs) / ((match_record['overs']*6 - total_legal_balls) / 6)) if target_runs and (match_record['overs']*6 - total_legal_balls) > 0 else 0, 2),
+                        # 'lastboundary': last_boundary_balls,
+                        # 'lastwicket': lwballs,
+                        # 'totalextras': total_extras,
+                        # 'currentstrikerruns': b_stat['runs'],
+                        # 'currentstrikerballs': b_stat['balls'],
+                        # 'currentnstrikerruns': get_stat(ns_id)['runs'],
+                        # 'currentnstrikerballs': get_stat(ns_id)['balls'],
+                        # 'currentbowlerwickets': bowl_stat['wicks'],
+                        # 'currentbowlerruns': bowl_stat['bowled_runs'],
+                        # 'currentbowlerballs': bowl_stat['bowled_balls']
                     })
 
             if inn_idx == 0:
@@ -276,8 +284,9 @@ def main():
                             df['season'] = df['season'].astype(str)
                         if 'tourmatch' in df.columns:
                                 df['tourmatch'] = df['tourmatch'].astype(str)
+                        df_deliveries = pd.DataFrame(batch_deliveries)
                         df.to_parquet(f"{STAGED_MATCHES}/chunk_{batch_counter}.parquet", index=False)
-                        df.to_parquet(f"{STAGED_DELIVERIES}/chunk_{batch_counter}.parquet", index=False)
+                        df_deliveries.to_parquet(f"{STAGED_DELIVERIES}/chunk_{batch_counter}.parquet", index=False)
                         df_ppl = pd.DataFrame(batch_ppl)
                         df_ppl.to_parquet(f"{STAGED_PEOPLE}/chunk_{batch_counter}.parquet", index=False)
                         batch_matches, batch_deliveries, batch_ppl = [], [], []
@@ -295,8 +304,11 @@ def main():
             df['season'] = df['season'].astype(str)
         if 'tourmatch' in df.columns:
             df['tourmatch'] = df['tourmatch'].astype(str)
+        df_deliveries = pd.DataFrame(batch_deliveries)
+        df_ppl = pd.DataFrame(batch_ppl)
         df.to_parquet(f"{STAGED_MATCHES}/chunk_{batch_counter}.parquet", index=False)
-        df.to_parquet(f"{STAGED_DELIVERIES}/chunk_{batch_counter}.parquet", index=False)
+        df_deliveries.to_parquet(f"{STAGED_DELIVERIES}/chunk_{batch_counter}.parquet", index=False)
+        df_ppl.to_parquet(f"{STAGED_PEOPLE}/chunk_{batch_counter}.parquet", index=False)
 
 if __name__ == '__main__':
     main()

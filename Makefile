@@ -20,6 +20,6 @@ transform:
 
 # Nuke the staged data and DuckDB file to start fresh
 clean:
-	rm -rf data/rawdata/playerjsons/*.json
+# 	rm -rf data/rawdata/playerjsons/*.json
 	rm -rf data/stageddata/*.parquet
 	rm -f data/stageddata/crick.duckdb

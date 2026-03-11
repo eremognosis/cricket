@@ -1,6 +1,6 @@
-{{ config(materialized='view') }}
 
-SELECT * FROM {{ source('raw_cricket', 'deliveries') }}
+
+SELECT * FROM "dev"."raw_cricket"."deliveries"
 
 
 -- ############ Columns ############

@@ -11,7 +11,7 @@
 
 # ===== IMPORTS =====
 import os
-import json
+import json , time, random
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging, traceback
@@ -49,6 +49,7 @@ def geturls(URLS,i):
         if ref:
             urssss.append(ref)
     URLS.extend(urssss)
+    time.sleep(random.uniform(0.12,0.3))
 
 def download_and_save_target(url):
     """Downloads the final JSON and saves it with proper directory handling."""
@@ -71,7 +72,7 @@ def download_and_save_target(url):
         
         with open(filepath, 'w', encoding='utf-8') as f: # "w" because in same file duplicate should not happen for whatever reasosn
             json.dump(data, f, indent=4)
-        
+        time.sleep(random.uniform(0.1,0.24))
         # Mark as processed after successful download
         new_hash = REGISTRY.get_file_hash(filepath)
         if new_hash:

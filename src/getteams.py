@@ -18,6 +18,8 @@ import logging, traceback
 from tqdm import tqdm
 from metaregis import MetadataRegistry
 from bidmap import tidmap
+from time import sleep
+import random
 # ===================
 
 
@@ -30,26 +32,34 @@ os.makedirs("./logs", exist_ok=True)
 # ==================
 
 def gettotalpages():
-    response = requests.get(BASE_URL, timeout=10)
-    response.raise_for_status()
-    data = response.json()
-    return int(data.get("pageCount", 1))
+    try:
+        response = requests.get(BASE_URL, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        return int(data.get("pageCount", 1))
+    except Exception as e:
+        logging.error(f"Error fetching total pages: {e}")
+        return 1
 
 def geturls(URLS,i):
     # if os.path.exists(f"{OUTPUT_DIR}/{i}.json"):
     #     return
     urssss = []
     url = f"{BASE_URL}?page={i}"
-    response = requests.get(url, timeout=10)
-    response.raise_for_status()
-    data = response.json()
-    items = data.get("items", [])
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        items = data.get("items", [])
+    except Exception as e:
+        logging.error(f"Error fetching URLs for page {i}: {e}")
+        return
     for item in items:
         ref = item.get("$ref")
         if ref:
             urssss.append(ref)
     URLS.extend(urssss)
-
+    sleep(random.uniform(0.1,0.4))
 def download_and_save_target(url):
     """Downloads the final JSON and saves it with proper directory handling."""
     id = url.rstrip('/').split('/')[-1].split('?')[0]
@@ -76,7 +86,7 @@ def download_and_save_target(url):
         new_hash = REGISTRY.get_file_hash(filepath)
         if new_hash:
             REGISTRY.mark_processed(filepath, 'team', new_hash)
-            
+        sleep(random.uniform(0.1,0.23))
         return True
     except Exception as e:
         logging.error(f"Error downloading {url}: {e}")

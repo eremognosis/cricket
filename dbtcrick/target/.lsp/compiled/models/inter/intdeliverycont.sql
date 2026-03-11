@@ -1,4 +1,4 @@
-{{ config(materialized='table') }}
+
 
 WITH base AS (
 	SELECT
@@ -12,7 +12,7 @@ WITH base AS (
 		coalesce(d.is_boundary, 0) AS boundary_flag,
 		coalesce(d.runs_batter_thisball, 0) AS batter_runs_ball,
 		coalesce(d.runs_total_thisball, 0) AS total_runs_ball
-	FROM {{ ref('stg_deliveries') }} d
+	FROM "dev"."main"."stg_deliveries" d
 ),
 
 team_progress AS (
