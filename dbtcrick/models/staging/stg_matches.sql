@@ -1,3 +1,3 @@
 {{ config(materialized='view') }}
 
-SELECT * FROM {{ source('raw_cricket', 'matches') }}
+SELECT * FROM read_parquet('../data/stageddata/matches/*/*.parquet')

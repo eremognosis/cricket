@@ -1,0 +1,11 @@
+dbtcrick:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: dev.duckdb
+      threads: 8
+    prod:
+      type: duckdb
+      path: prod.duckdb
+      threads: 8

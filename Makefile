@@ -32,7 +32,7 @@ pipeline:
 
 
 transform:
-	cd dbtcrick && dbt build
+	cd dbtcrick && dbt build --profiles-dir .
 
 # Nuke the staged data and DuckDB file to start fresh
 clean:

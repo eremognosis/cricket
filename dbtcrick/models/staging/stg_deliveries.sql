@@ -1,6 +1,6 @@
 {{ config(materialized='view') }}
 
-SELECT * FROM {{ source('raw_cricket', 'deliveries') }}
+SELECT * FROM read_parquet('../data/stageddata/deliveries/*/*.parquet')
 
 
 -- ############ Columns ############

@@ -152,8 +152,10 @@ inning_targets AS (
 		max(CASE WHEN t.inning = 1 THEN t.innings_runs_to_ball END) OVER (
 			PARTITION BY t.matchid
 		) AS first_innings_final_runs,
-		cast(max(coalesce(t.overs, 20)) OVER (PARTITION BY t.matchid) * 6 AS INTEGER) AS scheduled_legal_balls
+		cast(max(coalesce(m.overs, 20)) OVER (PARTITION BY t.matchid) * 6 AS INTEGER) AS scheduled_legal_balls
 	FROM team_progress t
+	LEFT JOIN {{ ref('stg_matches') }} m
+		ON t.matchid = m.matchid
 )
 
 SELECT

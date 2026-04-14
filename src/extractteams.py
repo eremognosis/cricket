@@ -28,10 +28,12 @@ STDIRRRRRR = "./data/stageddata"
 def main():
     os.makedirs(STDIRRRRRR, exist_ok=True) # check of existruih
     teams_data = []
+    out_path = f"{STDIRRRRRR}/teams.parquet"
+    rebuild_mode = not os.path.exists(out_path)
     
     for filepath in glob.glob(f"{tdirrrrrr}/*.json"):
         file_hash = REGISTRY.get_file_hash(filepath)
-        if REGISTRY.is_processed(filepath, file_hash):
+        if (not rebuild_mode) and REGISTRY.is_processed(filepath, file_hash):
             continue
             
         try:
@@ -57,11 +59,16 @@ def main():
 
     if teams_data:
         df = pd.DataFrame(teams_data)
-        out_path = f"{STDIRRRRRR}/teams.parquet"
-        if os.path.exists(out_path):
+        if os.path.exists(out_path) and not rebuild_mode:
             df = pd.concat([pd.read_parquet(out_path), df]).drop_duplicates(subset=['team_id'], keep='last')
+        else:
+            df = df.drop_duplicates(subset=['team_id'], keep='last')
         df.to_parquet(out_path, index=False)
         print(f"Staged {len(teams_data)} teams.")
+    elif os.path.exists(out_path):
+        print("No new teams to stage.")
+    else:
+        print("No team data found to stage.")
 
 if __name__ == '__main__':
     main()
