@@ -12,14 +12,23 @@ from concurrent.futures import ProcessPoolExecutor
 from metaregis import MetadataRegistry
 from bidmap import midmap, idmap
 REGISTRY = MetadataRegistry()
-SELECT_DATA = 'WT20I'
+SELECT_DATA = os.getenv('SELECT_DATA', 'WBBL')
 # 
 # as of today, i will change a bit
 
 # 
 # 
+def resolve_matches_dir(select_data):
+    preferred = f"./data/rawdata/matches/{select_data}"
+    fallback = f"./data/rawdata/{select_data}"
+    if os.path.exists(preferred):
+        return preferred
+    if os.path.exists(fallback):
+        return fallback
+    return preferred
 
-MATCHES_DIR = f"./data/rawdata/matches/{SELECT_DATA}"
+
+MATCHES_DIR = resolve_matches_dir(SELECT_DATA)
 STAGED_DELIVERIES = f"./data/stageddata/deliveries/{SELECT_DATA}"
 STAGED_MATCHES = f"./data/stageddata/matches/{SELECT_DATA}"
 STAGED_PEOPLE = f"./data/stageddata/peoplematchdata/{SELECT_DATA}"

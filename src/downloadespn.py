@@ -17,8 +17,12 @@
 
 
 
+import argparse
 import os
 import json
+import time
+import random
+import threading
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging, traceback
@@ -45,15 +49,83 @@ TARGET_ID_KEY = "id"
 pc_KEY = "pageCount"
 
 MAX_WORKERS = 80   # We are good
+MAX_PASSES = 3
+MIN_REQUEST_INTERVAL = float(os.getenv("CRICK_MIN_REQUEST_INTERVAL", "0.05"))
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)  # agfain its PTSD from last run
+
+_REQUEST_LOCK = threading.Lock()
+_LAST_REQUEST_TS = 0.0
+
+
+def _paced_get(url, timeout=10):
+    global _LAST_REQUEST_TS
+    with _REQUEST_LOCK:
+        wait_for = MIN_REQUEST_INTERVAL - (time.monotonic() - _LAST_REQUEST_TS)
+        if wait_for > 0:
+            time.sleep(wait_for)
+        response = requests.get(url, timeout=timeout)
+        _LAST_REQUEST_TS = time.monotonic()
+    return response
+
+
+def _should_retry_status(code):
+    if code >= 500:
+        return True
+    if code in (408, 409, 425, 429):
+        return True
+    if 400 <= code < 500:
+        return False
+    return True
+
+
+def _request_json_with_retry(url, timeout=10):
+    last_error = None
+    for attempt in range(1, MAX_PASSES + 1):
+        try:
+            response = _paced_get(url, timeout=timeout)
+            if response.status_code >= 400:
+                if not _should_retry_status(response.status_code):
+                    return None
+                raise requests.HTTPError(
+                    f"HTTP {response.status_code} for {url}", response=response
+                )
+            return response.json()
+        except Exception as exc:
+            last_error = exc
+            if attempt == MAX_PASSES:
+                break
+            time.sleep((0.25 * (2 ** (attempt - 1))) + random.uniform(0.05, 0.35))
+    with open("./logs/download.log", "a") as logf:
+        logf.write(
+            f"Failed after {MAX_PASSES} attempts for {url}: {last_error}\n{traceback.format_exc()}\n"
+        )
+    return None
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Download season JSONs for leagues.")
+    parser.add_argument(
+        "--league-id",
+        action="append",
+        default=[],
+        help="Only process specific ESPN league id(s). Can be repeated.",
+    )
+    return parser.parse_args()
+
+
+def _is_selected_league(data, selected_ids):
+    if not selected_ids:
+        return True
+    league_id = data.get("id")
+    return str(league_id) in selected_ids
 
 def fetch_page_data(url):
     """Fetches a specific pagination URL and returns its items and the page count."""
     try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        data = response.json()
+        data = _request_json_with_retry(url, timeout=10)
+        if not data:
+            return [], 0
         items = data.get(ITEMS_KEY, [])
         turl = [item[ITEM_REF_KEY] for item in items if ITEM_REF_KEY in item]
         pc = data.get(pc_KEY, 1)
@@ -65,9 +137,9 @@ def fetch_page_data(url):
 def download_and_save_target(url):
     """Downloads the final JSON and saves it with proper directory handling."""
     try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        data = response.json()
+        data = _request_json_with_retry(url, timeout=10)
+        if not data:
+            return False
         
         doc_id = data.get(TARGET_ID_KEY)
         year = data.get('year', 'u') # u is unknown year, just in case or if modi decides to change year from gregorian to something else like modiabd
@@ -95,6 +167,9 @@ def download_and_save_target(url):
 
 
 def main():
+    args = parse_args()
+    selected_ids = {str(x) for x in args.league_id}
+
     if not os.path.exists(INPUT_DIR):
         print(f" '{INPUT_DIR}' is a void and void stared back to throw error")
         return
@@ -109,6 +184,8 @@ def main():
             try:
                 with open(filepath, 'r', encoding='utf-8') as f:
                     llddd = json.load(f)
+                    if not _is_selected_league(llddd, selected_ids):
+                        continue
                     if innkey in llddd and REF_KEY in llddd[innkey]:
                         pbburl.append(llddd[innkey][REF_KEY])
             except Exception:

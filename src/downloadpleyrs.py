@@ -11,8 +11,11 @@
 
 
 # ===== IMPORTS =====
-import os, csv, pandas as pd, sqlite3
+import argparse
+import glob
+import os, csv, pandas as pd
 import json,time,random
+import threading
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging, traceback
@@ -27,6 +30,8 @@ registry = MetadataRegistry()
 REGDAT = "./data/rawdata/registry/people.csv"
 OUTPUT_DIR = "./data/rawdata/playerjsons"
 os.makedirs(OUTPUT_DIR, exist_ok=True)  
+MAX_PASSES = 3
+MIN_REQUEST_INTERVAL = float(os.getenv("CRICK_MIN_REQUEST_INTERVAL", "0.05"))
 
 # ###########
 PDATAS = []
@@ -35,13 +40,105 @@ PDATAS = []
 TARGET_ID_KEY = "id"
 pc_KEY = "pageCount"
 
+_REQUEST_LOCK = threading.Lock()
+_LAST_REQUEST_TS = 0.0
+
+
+def _paced_get(url, timeout=10):
+    global _LAST_REQUEST_TS
+    with _REQUEST_LOCK:
+        wait_for = MIN_REQUEST_INTERVAL - (time.monotonic() - _LAST_REQUEST_TS)
+        if wait_for > 0:
+            time.sleep(wait_for)
+        response = requests.get(url, timeout=timeout)
+        _LAST_REQUEST_TS = time.monotonic()
+    return response
+
+
+def _should_retry_status(code):
+    if code >= 500:
+        return True
+    if code in (408, 409, 425, 429):
+        return True
+    if 400 <= code < 500:
+        return False
+    return True
+
+
+def _request_json_with_retry(url, timeout=10):
+    last_error = None
+    for attempt in range(1, MAX_PASSES + 1):
+        try:
+            response = _paced_get(url, timeout=timeout)
+            if response.status_code >= 400:
+                if not _should_retry_status(response.status_code):
+                    return None
+                raise requests.HTTPError(
+                    f"HTTP {response.status_code} for {url}", response=response
+                )
+            return response.json()
+        except Exception as exc:
+            last_error = exc
+            if attempt == MAX_PASSES:
+                break
+            time.sleep((0.25 * (2 ** (attempt - 1))) + random.uniform(0.05, 0.35))
+    with open("./logs/download.log", "a") as logf:
+        logf.write(
+            f"Failed after {MAX_PASSES} attempts for {url}: {last_error}\n{traceback.format_exc()}\n"
+        )
+    return None
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Download player JSONs.")
+    parser.add_argument(
+        "--select-data",
+        default=os.getenv("SELECT_DATA", ""),
+        help="Match folder key under data/rawdata/matches/<SEL> or data/rawdata/<SEL> (example: WBBL).",
+    )
+    return parser.parse_args()
+
+
+def _resolve_matches_dir(select_data):
+    if not select_data:
+        return None
+    preferred = f"./data/rawdata/matches/{select_data}"
+    fallback = f"./data/rawdata/{select_data}"
+    if os.path.exists(preferred):
+        return preferred
+    if os.path.exists(fallback):
+        return fallback
+    return preferred
+
+
+def _collect_registry_ids_from_matches(select_data):
+    if not select_data:
+        return None
+    matches_dir = _resolve_matches_dir(select_data)
+    if not os.path.exists(matches_dir):
+        return set()
+
+    registry_ids = set()
+    for filepath in glob.glob(f"{matches_dir}/*.json"):
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            people = data.get("info", {}).get("registry", {}).get("people", {})
+            for value in people.values():
+                if value:
+                    registry_ids.add(str(value))
+        except Exception:
+            with open("./logs/error_players.log", "a") as logf:
+                logf.write(f"Error parsing match file {filepath}\n{traceback.format_exc()}\n")
+    return registry_ids
+
 
 def download_and_save_target(url,id):
     """Downloads the final JSON and saves it with proper directory handling."""
     try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        data = response.json()
+        data = _request_json_with_retry(url, timeout=10)
+        if not data:
+            return False
         
         doc_id = data.get(TARGET_ID_KEY)
   # PTSD from last time, we fucked up and saved all seasons of a league in one folder, so now we have to save each season in its own folder named by the leagueid, and then the file is id.json inside it. I know its cringe but we are doing it for safety and sanity and redundancy and unemployement and caffeine and drunkedness whatevrjtg.
@@ -52,7 +149,6 @@ def download_and_save_target(url,id):
         
         with open(filepath, 'w', encoding='utf-8') as f: # "w" because in same file duplicate should not happen for whatever reasosn
             json.dump(data, f, indent=4)
-        time.sleep(random.uniform(0.1,0.4))
         return True
     
     except Exception as e:
@@ -85,7 +181,6 @@ def downloadplayer(row):
     PDATAS.append({
         "id": idd,
         "idnew": id,
-        
     })
     ok = download_and_save_target(url, id)
 
@@ -98,10 +193,17 @@ def downloadplayer(row):
 
 
 def main():
+    args = parse_args()
+    selected_registry_ids = _collect_registry_ids_from_matches(args.select_data)
+
     with open(REGDAT, 'r') as f:
         reader = csv.reader(f)
         next(reader)
         rows = list(reader)
+
+    if selected_registry_ids is not None:
+        rows = [row for row in rows if row[0] and str(row[0]) in selected_registry_ids]
+
     with ThreadPoolExecutor(max_workers=20) as executor:
         futures = [executor.submit(downloadplayer, row) for row in rows]
         with tqdm(total=len(futures), desc="Downloading player data") as pbar:
@@ -109,7 +211,11 @@ def main():
                 future.result()
                 pbar.update(1)
     df = pd.DataFrame(PDATAS)
-    df.to_parquet("./data/stageddata/playeridmap.parquet", index=False)
+    if not df.empty:
+        out_path = "./data/stageddata/playeridmap.parquet"
+        if os.path.exists(out_path):
+            df = pd.concat([pd.read_parquet(out_path), df]).drop_duplicates(subset=["id"], keep="last")
+        df.to_parquet(out_path, index=False)
 
 # conn = sqlite3.connect("./data/selfpeople.db")
 # curr = conn.cursor()
@@ -130,4 +236,5 @@ def main():
 # conn.close()
 
 
-main()
+if __name__ == "__main__":
+    main()
