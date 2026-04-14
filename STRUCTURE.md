@@ -1,6 +1,6 @@
 # Project Directory Structure
 
-Generated on: 2026-03-07 01:01:46
+Generated on: 2026-04-14 11:09:16
 
 ```
 /
@@ -10,72 +10,75 @@ Generated on: 2026-03-07 01:01:46
 ├── .gitignore
 ├── Makefile
 ├── data/
-│   ├── selfpeople.db
 │   ├── rawdata/
-│   │   ├── people.csv:Zone.Identifier
+│   │   ├── ipl_json.zip
+│   │   ├── wbb_female_json.zip
 │   │   ├── leaguejsons/
 │   │   │   ├── 1001201261.json
-│   │   │   ├── 1001761657.json
-│   │   │   └── (12780 more .json files)
-│   │   ├── matches/
-│   │   │   └── WT20I/
-│   │   │       ├── 1043989.json:Zone.Identifier
-│   │   │       ├── 1043991.json:Zone.Identifier
-│   │   │       ├── (1859 more .Identifier files)
-│   │   │       ├── 1043989.json
-│   │   │       ├── 1043991.json
-│   │   │       ├── (1858 more .json files)
-│   │   │       └── README.txt
+│   │   │   ├── 1002874445.json
+│   │   │   └── (2148 more .json files)
 │   │   ├── playerjsons/
-│   │   │   ├── 1000145860.json
-│   │   │   ├── 1000485098.json
-│   │   │   └── (16901 more .json files)
+│   │   │   ├── 1000612344.json
+│   │   │   ├── 1003023775.json
+│   │   │   └── (940 more .json files)
 │   │   ├── registry/
 │   │   │   └── people.csv
-│   │   └── seasons/
-│   │       ├── 101048/
-│   │       │   └── 2001.json
-│   │       ├── 101385/
-│   │       │   └── 2001.json
-│   │       ├── 1020677/
-│   │       │   └── 2016.json
-│   │       ├── 1030263/
-│   │       │   └── 2016.json
-│   │       ├── 1046579/
-│   │       │   └── 2016.json
-│   │       ├── 1048451/
-│   │       │   └── 2016.json
-│   │       ├── 105647/
-│   │       │   └── 2001.json
-│   │       ├── 1058107/
-│   │       │   └── 2016.json
-│   │       ├── 1058124/
-│   │       │   └── 2016.json
-│   │       ├── 1058342/
-│   │       │   └── 2016.json
-│   │       └── (6437 more subdirectories)
+│   │   ├── seasons/
+│   │   │   └── 8048/
+│   │   │       ├── 2008.json
+│   │   │       ├── 2009.json
+│   │   │       └── (17 more .json files)
+│   │   └── teamjsons/
+│   │       ├── 1000996286.json
+│   │       ├── 100166831.json
+│   │       └── (6563 more .json files)
 │   └── stageddata/
 │       ├── registry.db
-│       ├── registry.db-shm
-│       └── registry.db-wal
+│       ├── playeridmap.parquet
+│       ├── teams.parquet
+│       ├── deliveries/
+│       │   └── IPL/
+│       │       ├── chunk_0.parquet
+│       │       ├── chunk_1.parquet
+│       │       └── (1 more .parquet file)
+│       ├── matches/
+│       │   └── IPL/
+│       │       ├── chunk_0.parquet
+│       │       ├── chunk_1.parquet
+│       │       └── (1 more .parquet file)
+│       └── peoplematchdata/
+│           └── IPL/
+│               ├── chunk_0.parquet
+│               ├── chunk_1.parquet
+│               └── (1 more .parquet file)
 ├── dbtcrick/
+│   ├── dev.duckdb
 │   ├── dbt_project.yml
+│   ├── profiles.yml
 │   ├── schema.yml
+│   ├── .user.yml
+│   ├── .vscode/
+│   │   └── extensions.json
+│   ├── logs/
+│   │   ├── dbt.log
+│   │   └── query_log.sql
 │   └── models/
 │       ├── inter/
 │       │   └── intdeliverycont.sql
 │       ├── mart/
-│       │   └── batterstats1.sql
+│       │   ├── batterstats.sql
+│       │   └── bowlerstats.sql
 │       └── staging/
 │           ├── stg_deliveries.sql
-│           ├── stg_matches.sql
-│           └── sources.yml
+│           ├── stg_leagues.sql
+│           └── (6 more .sql files)
 ├── logs/
+│   ├── dbt.log
 │   ├── download.log
 │   ├── error_players.log
-│   └── missing_players.log
+│   ├── missing_players.log
+│   └── query_log.sql
 └── src/
-    ├── bidmap.py:Zone.Identifier
     ├── bidmap.py
     ├── downloadespn.py
     ├── downloadpleyrs.py
@@ -85,5 +88,6 @@ Generated on: 2026-03-07 01:01:46
     ├── extractteams.py
     ├── generate_structure.py
     ├── getleaguefiles.py
+    ├── getteams.py
     └── metaregis.py
 ```
